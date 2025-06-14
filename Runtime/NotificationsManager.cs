@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Unity.Notifications;
 using Unity.Notifications.Android;
@@ -7,9 +8,16 @@ namespace NotificationsLibrary.Runtime
 {
     public class NotificationsManager : MonoBehaviour
     {
-        #region SERIALIZED_FEILDS
+        #region GAMEOBJECTS_REFERENCES
 
-        [SerializeField] private AndroidNotificationChannel[] _channels;
+        public AndroidNotificationChannel[] _channels = new []
+        {
+            new AndroidNotificationChannel(NotificationsConstants.NOTIFICATION_CATEGORY_D0D1,NotificationsConstants.NOTIFICATION_CATEGORY_D0D1_NAME,NotificationsConstants.NOTIFICATION_CATEGORY_D0D1_DESC,Importance.High),
+            new AndroidNotificationChannel(NotificationsConstants.NOTIFICATION_CATEGORY_MORNING,NotificationsConstants.NOTIFICATION_CATEGORY_MORNING_NAME,NotificationsConstants.NOTIFICATION_CATEGORY_MORNING_DESC,Importance.High),
+            new AndroidNotificationChannel(NotificationsConstants.NOTIFICATION_CATEGORY_AFTERNOON,NotificationsConstants.NOTIFICATION_CATEGORY_AFTERNOON_NAME,NotificationsConstants.NOTIFICATION_CATEGORY_AFTERNOON_DESC,Importance.High),
+            new AndroidNotificationChannel(NotificationsConstants.NOTIFICATION_CATEGORY_EVENING,NotificationsConstants.NOTIFICATION_CATEGORY_EVENING_NAME,NotificationsConstants.NOTIFICATION_CATEGORY_EVENING_DESC,Importance.High),
+            new AndroidNotificationChannel(NotificationsConstants.NOTIFICATION_CATEGORY_NIGHT,NotificationsConstants.NOTIFICATION_CATEGORY_NIGHT_NAME,NotificationsConstants.NOTIFICATION_CATEGORY_NIGHT_DESC,Importance.High),
+        };
 
         #endregion
         
@@ -30,8 +38,8 @@ namespace NotificationsLibrary.Runtime
             {
                 _instance = this;
                 DontDestroyOnLoad(gameObject);
-                InitializeNotificationChannels();
             }
+            InitializeNotificationChannels();
         }
         
         IEnumerator Start()
@@ -70,8 +78,48 @@ namespace NotificationsLibrary.Runtime
 
         public void ScheduleNotification(BaseLocalNotification notification)
         {
+            if (!notification.CanScheduleNotification() || notification.GetNotificationFireTime() <= DateTime.Now) {
+                return;
+            }
+#if UNITY_ANDROID
+            AndroidNotification androidNotification = new AndroidNotification();
+            androidNotification.Number = notification.GetNotificationBadge();
+            androidNotification.IntentData = notification.GetNotificationExtraData();
+            androidNotification.Title = notification.GetNotificationTitle();
+            androidNotification.Text = notification.GetNotificationText();
+            androidNotification.Group = notification.GetNotificationGroup();
+            androidNotification.ShowInForeground = notification.CanShowNotificationInForeGround();
+            androidNotification.GroupSummary = notification.IsGroupSummaryEnabled();
+            androidNotification.FireTime = notification.GetNotificationFireTime();
+            androidNotification.Style = notification.GetNotificationStyle();
+            if (!string.IsNullOrEmpty(notification.GetLargeIcon())) {
+                androidNotification.LargeIcon = notification.GetLargeIcon();
+            }
+
+            if (!string.IsNullOrEmpty(notification.GetSmallIcon()))
+            {
+                androidNotification.SmallIcon = notification.GetSmallIcon();
+            }
+
+            if (notification.GetNotificationStyle() == NotificationStyle.BigPictureStyle) {
+                androidNotification.BigPicture = notification.GetBigPictureStyle();
+            }
+
+            if (notification.GetNotificationRepeatInterval() != null) {
+                androidNotification.RepeatInterval = notification.GetNotificationRepeatInterval();
+            }
+            if (notification.GetNotificationId() != 0) {
+                AndroidNotificationCenter.SendNotificationWithExplicitID(androidNotification,notification.GetNotificationCategory(), (int)notification.GetNotificationId());
+                Debug.Log($"-=-=Notification scheduled with Title: {notification.GetNotificationTitle()} on Time : {notification.GetNotificationFireTime()}");
+            }else {
+                AndroidNotificationCenter.SendNotification(androidNotification, notification.GetNotificationCategory());
+                Debug.Log($"-=-=Notification scheduled with Title: {notification.GetNotificationTitle()} on Time : {notification.GetNotificationFireTime()}");
+            }
+#else
             Notification notificationObj = new Notification();
-            notificationObj.Identifier = notification.GetNotificationId();
+            if (notification.GetNotificationId() != 0) {
+                notificationObj.Identifier = notification.GetNotificationId();
+            }
             notificationObj.Badge = notification.GetNotificationBadge();
             notificationObj.Data = notification.GetNotificationExtraData();
             notificationObj.Title = notification.GetNotificationTitle();
@@ -81,7 +129,9 @@ namespace NotificationsLibrary.Runtime
             notificationObj.IsGroupSummary = notification.IsGroupSummaryEnabled();
 
             NotificationCenter.ScheduleNotification<NotificationSchedule>(notificationObj,
-                notification.GetNotificationCategory(), notification.GetNotificationSchedule());
+                    notification.GetNotificationCategory(), notification.GetNotificationSchedule());
+                Debug.Log($"Notification scheduled with Title: {notification.GetNotificationTitle()}");
+#endif
         }
 
         public void CancelNotification(int id)

@@ -1,11 +1,15 @@
 using System;
 using Unity.Notifications;
+using Unity.Notifications.Android;
 
 namespace NotificationsLibrary.Runtime
 {
     public abstract class BaseLocalNotification
     {
-        public abstract int? GetNotificationId();
+        public virtual int? GetNotificationId()
+        {
+            return 0;
+        }
 
         public virtual int GetNotificationBadge()
         {
@@ -36,11 +40,40 @@ namespace NotificationsLibrary.Runtime
         public abstract string GetNotificationCategory();
 
         /// <summary>
-        /// Set the NotificationSchedule in form of either <see cref="NotificationDateTimeSchedule"/> or <see cref="NotificationIntervalSchedule"/>
-        /// Or Create Custom Schedule by implementing <see cref="NotificationSchedule"/>
+        /// Return Fire time in form of DateTime
         /// </summary>
         /// <returns></returns>
-        public abstract NotificationSchedule GetNotificationSchedule();
+        public abstract DateTime GetNotificationFireTime();
+
+        public virtual bool CanScheduleNotification()
+        {
+            return true;
+        }
+
+        public virtual TimeSpan? GetNotificationRepeatInterval()
+        {
+            return null;
+        }
+
+        public virtual NotificationStyle GetNotificationStyle()
+        {
+            return NotificationStyle.None;
+        }
+
+        public virtual string GetLargeIcon()
+        {
+            return "icon_1";
+        }
+
+        public virtual string GetSmallIcon()
+        {
+            return "icon_0";
+        }
+
+        public virtual BigPictureStyle? GetBigPictureStyle()
+        {
+            return null;
+        }
     }
     
 }
